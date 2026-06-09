@@ -3,7 +3,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { computeTripDeduction, formatCents, isLateEntered } from '@/lib/deductions';
 import { prisma } from '@/lib/db';
-import { requireOrgContext } from '@/lib/session';
+import { requireOrgContextForPage } from '@/lib/session';
 import { listCategories, listTrips } from '@/lib/trips';
 import { listVehicles } from '@/lib/vehicles';
 
@@ -30,7 +30,7 @@ function parseOptionalDate(value?: string): Date | undefined {
 }
 
 export default async function TripsPage({ searchParams }: TripsPageProps) {
-  const { organizationId } = await requireOrgContext();
+  const { organizationId } = await requireOrgContextForPage();
 
   const trips = await listTrips(prisma, organizationId, {
     vehicleId: parseOptionalInt(searchParams.vehicle_id),

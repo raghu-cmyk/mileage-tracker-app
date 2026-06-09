@@ -3,7 +3,7 @@ import { updateTripAction, type ActionResult } from '@/app/actions/data';
 import { PageHeader } from '@/components/PageHeader';
 import { TripForm } from '@/components/TripForm';
 import { prisma } from '@/lib/db';
-import { requireOrgContext } from '@/lib/session';
+import { requireOrgContextForPage } from '@/lib/session';
 import { getTrip, listCategories } from '@/lib/trips';
 import { listVehicles } from '@/lib/vehicles';
 
@@ -12,7 +12,7 @@ interface EditTripPageProps {
 }
 
 export default async function EditTripPage({ params }: EditTripPageProps) {
-  const { organizationId } = await requireOrgContext();
+  const { organizationId } = await requireOrgContextForPage();
   const tripId = parseInt(params.id, 10);
   if (Number.isNaN(tripId)) notFound();
 

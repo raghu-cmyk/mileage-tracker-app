@@ -1,10 +1,10 @@
 import { createVehicleAction } from '@/app/actions/data';
 import { PageHeader } from '@/components/PageHeader';
 import { VehicleForm } from '@/components/VehicleForm';
-import { requireOrgContext } from '@/lib/session';
+import { requireOrgContextForPage } from '@/lib/session';
 
 export default async function NewVehiclePage() {
-  await requireOrgContext();
+  await requireOrgContextForPage();
 
   return (
     <>

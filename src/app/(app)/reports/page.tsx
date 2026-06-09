@@ -7,14 +7,14 @@ import {
 } from '@/lib/deductions';
 import { prisma } from '@/lib/db';
 import { getErrorMessage } from '@/lib/errors';
-import { requireOrgContext } from '@/lib/session';
+import { requireOrgContextForPage } from '@/lib/session';
 
 interface ReportsPageProps {
   searchParams: { year?: string };
 }
 
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
-  const { organizationId } = await requireOrgContext();
+  const { organizationId } = await requireOrgContextForPage();
 
   const years = availableTaxYears();
   const selectedYear = searchParams.year

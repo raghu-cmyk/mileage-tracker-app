@@ -3,12 +3,12 @@ import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { computeYearSummary, formatCents, isLateEntered } from '@/lib/deductions';
 import { prisma } from '@/lib/db';
-import { requireOrgContext } from '@/lib/session';
+import { requireOrgContextForPage } from '@/lib/session';
 import { listTrips } from '@/lib/trips';
 import { listVehicles } from '@/lib/vehicles';
 
 export default async function DashboardPage() {
-  const { organizationId } = await requireOrgContext();
+  const { organizationId } = await requireOrgContextForPage();
   const vehicles = await listVehicles(prisma, organizationId);
   const recentTrips = (await listTrips(prisma, organizationId)).slice(0, 5);
   const currentYear = new Date().getFullYear();

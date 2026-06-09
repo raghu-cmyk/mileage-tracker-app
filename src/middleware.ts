@@ -56,8 +56,9 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Platform admins have no tenant context; keep them in the admin portal.
-  if (isPlatformAdmin && (pathname === '/dashboard' || pathname === '/')) {
+  // Platform admins have no tenant context; keep them in the admin portal and
+  // out of every tenant-scoped application page (which would otherwise 500).
+  if (isPlatformAdmin && !pathname.startsWith('/api/')) {
     return NextResponse.redirect(new URL('/admin', request.url));
   }
 

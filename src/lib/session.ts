@@ -2,6 +2,7 @@ import 'server-only';
 
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import type { Organization, User } from '@prisma/client';
 import { ROLES, SESSION_TTL_SECONDS } from './constants';
 import { prisma } from './db';
@@ -80,6 +81,30 @@ export async function requireOrgContext(): Promise<OrgContext> {
     throw new AuthError('This organization has been suspended. Contact your administrator.', 403);
   }
   return { user, organizationId: organization.id, organization };
+}
+
+/**
+ * Page-friendly variant of requireOrgContext: instead of throwing (which renders
+ * a 500 inside a Server Component), it redirects gracefully — platform admins to
+ * the admin portal, unauthenticated/stale sessions to login.
+ */
+export async function requireOrgContextForPage(): Promise<OrgContext> {
+  try {
+    return await requireOrgContext();
+  } catch (err) {
+    if (err instanceof AuthError) {
+      const userId = await getCurrentUserId();
+      if (userId == null) {
+        redirect('/login');
+      }
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user?.role === ROLES.PLATFORM_ADMIN) {
+        redirect('/admin');
+      }
+      redirect(`/login?error=${encodeURIComponent(err.message)}`);
+    }
+    throw err;
+  }
 }
 
 export async function requirePlatformAdmin(): Promise<User> {

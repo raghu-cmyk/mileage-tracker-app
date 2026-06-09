@@ -11,7 +11,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { VehicleForm } from '@/components/VehicleForm';
 import { availableTaxYears } from '@/lib/deductions';
 import { prisma } from '@/lib/db';
-import { requireOrgContext } from '@/lib/session';
+import { requireOrgContextForPage } from '@/lib/session';
 import {
   getVehicle,
   listOdometerReadings,
@@ -23,7 +23,7 @@ interface VehicleDetailPageProps {
 }
 
 export default async function VehicleDetailPage({ params }: VehicleDetailPageProps) {
-  const { organizationId } = await requireOrgContext();
+  const { organizationId } = await requireOrgContextForPage();
   const vehicleId = parseInt(params.id, 10);
   if (Number.isNaN(vehicleId)) notFound();
 

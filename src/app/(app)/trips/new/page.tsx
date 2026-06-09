@@ -4,12 +4,12 @@ import { createTripAction } from '@/app/actions/data';
 import { PageHeader } from '@/components/PageHeader';
 import { TripForm } from '@/components/TripForm';
 import { prisma } from '@/lib/db';
-import { requireOrgContext } from '@/lib/session';
+import { requireOrgContextForPage } from '@/lib/session';
 import { listCategories } from '@/lib/trips';
 import { listVehicles } from '@/lib/vehicles';
 
 export default async function NewTripPage() {
-  const { organizationId } = await requireOrgContext();
+  const { organizationId } = await requireOrgContextForPage();
   const [categories, vehicles] = await Promise.all([
     listCategories(prisma),
     listVehicles(prisma, organizationId),
