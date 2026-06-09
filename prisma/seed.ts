@@ -1,7 +1,11 @@
+import { hash } from '@node-rs/argon2';
 import { PrismaClient } from '@prisma/client';
 import { validateRateTable } from '../src/lib/rates';
 
 const prisma = new PrismaClient();
+
+const PLATFORM_ADMIN_USERNAME = process.env.PLATFORM_ADMIN_USERNAME ?? 'platform-admin';
+const PLATFORM_ADMIN_PASSWORD = process.env.PLATFORM_ADMIN_PASSWORD ?? 'admin12345';
 
 const DEFAULT_CATEGORIES = [
   { code: 'business', displayName: 'Business', isDeductible: true },
@@ -69,7 +73,29 @@ async function main() {
   }
 
   await validateRateTable(prisma);
-  console.log('Seed completed: categories and IRS mileage rates.');
+
+  const existingAdmin = await prisma.user.findUnique({
+    where: { username: PLATFORM_ADMIN_USERNAME },
+  });
+  if (!existingAdmin) {
+    const passwordHash = await hash(PLATFORM_ADMIN_PASSWORD, {
+      memoryCost: 65536,
+      timeCost: 3,
+      parallelism: 4,
+      outputLen: 32,
+    });
+    await prisma.user.create({
+      data: {
+        username: PLATFORM_ADMIN_USERNAME,
+        passwordHash,
+        role: 'PLATFORM_ADMIN',
+        organizationId: null,
+      },
+    });
+    console.log(`Seed: created platform admin '${PLATFORM_ADMIN_USERNAME}'.`);
+  }
+
+  console.log('Seed completed: categories, IRS mileage rates, and platform admin.');
 }
 
 main()

@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getErrorMessage } from '@/lib/errors';
-import { requireAuthenticatedUser } from '@/lib/session';
+import { requireOrgContext } from '@/lib/session';
 import { createTrip } from '@/lib/trips';
 
 export async function POST(request: Request) {
   try {
-    await requireAuthenticatedUser();
+    const { organizationId } = await requireOrgContext();
     const body = await request.json();
-    const trip = await createTrip(prisma, {
+    const trip = await createTrip(prisma, organizationId, {
       tripDateRaw: body.trip_date ?? body.tripDate,
       origin: body.origin,
       destination: body.destination,

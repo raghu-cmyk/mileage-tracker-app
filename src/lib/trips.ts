@@ -66,6 +66,7 @@ function parseOptionalOdometer(raw: string | null | undefined, label: string): n
 
 async function validateTripFields(
   db: DbClient,
+  organizationId: number,
   fields: {
     tripDateRaw?: string | null;
     origin?: string | null;
@@ -119,7 +120,7 @@ async function validateTripFields(
   if (Number.isNaN(vehicleId)) {
     throw new ValidationError('Vehicle is required.');
   }
-  const vehicle = await db.vehicle.findUnique({ where: { id: vehicleId } });
+  const vehicle = await db.vehicle.findFirst({ where: { id: vehicleId, organizationId } });
   if (!vehicle || vehicle.isArchived) {
     throw new ValidationError('Vehicle is required.');
   }
@@ -127,7 +128,11 @@ async function validateTripFields(
   return { tripDate, origin, destination, businessPurpose, miles, categoryId, vehicleId };
 }
 
-export async function listTrips(db: DbClient, filters: TripFilters = {}) {
+export async function listTrips(
+  db: DbClient,
+  organizationId: number,
+  filters: TripFilters = {}
+) {
   const tripDateFilter =
     filters.dateFrom != null || filters.dateTo != null
       ? {
@@ -138,6 +143,7 @@ export async function listTrips(db: DbClient, filters: TripFilters = {}) {
 
   return db.trip.findMany({
     where: {
+      organizationId,
       ...(filters.vehicleId != null ? { vehicleId: filters.vehicleId } : {}),
       ...(filters.categoryId != null ? { categoryId: filters.categoryId } : {}),
       ...(tripDateFilter ? { tripDate: tripDateFilter } : {}),
@@ -147,15 +153,16 @@ export async function listTrips(db: DbClient, filters: TripFilters = {}) {
   });
 }
 
-export async function getTrip(db: DbClient, tripId: number) {
-  return db.trip.findUnique({
-    where: { id: tripId },
+export async function getTrip(db: DbClient, organizationId: number, tripId: number) {
+  return db.trip.findFirst({
+    where: { id: tripId, organizationId },
     include: { vehicle: true, category: true, receipts: true },
   });
 }
 
 export async function createTrip(
   db: DbClient,
+  organizationId: number,
   fields: {
     tripDateRaw?: string | null;
     origin?: string | null;
@@ -168,12 +175,13 @@ export async function createTrip(
     odometerEndRaw?: string | null;
   }
 ) {
-  const validated = await validateTripFields(db, fields);
+  const validated = await validateTripFields(db, organizationId, fields);
   const odometerStart = parseOptionalOdometer(fields.odometerStartRaw, 'Odometer start');
   const odometerEnd = parseOptionalOdometer(fields.odometerEndRaw, 'Odometer end');
 
   const trip = await db.trip.create({
     data: {
+      organizationId,
       tripDate: validated.tripDate,
       origin: validated.origin,
       destination: validated.destination,
@@ -209,6 +217,7 @@ export async function createTrip(
 
 export async function updateTrip(
   db: DbClient,
+  organizationId: number,
   trip: Trip,
   fields: {
     tripDateRaw?: string | null;
@@ -222,7 +231,7 @@ export async function updateTrip(
     odometerEndRaw?: string | null;
   }
 ) {
-  const validated = await validateTripFields(db, fields);
+  const validated = await validateTripFields(db, organizationId, fields);
   const odometerStart = parseOptionalOdometer(fields.odometerStartRaw, 'Odometer start');
   const odometerEnd = parseOptionalOdometer(fields.odometerEndRaw, 'Odometer end');
 

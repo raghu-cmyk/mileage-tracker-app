@@ -1,11 +1,11 @@
 import 'server-only';
 
 import { hash, verify } from '@node-rs/argon2';
-import type { User } from '@prisma/client';
+import type { Organization, User } from '@prisma/client';
 import type { DbClient } from './db';
 import { AuthError } from './errors';
 
-import { MAX_LOGIN_ATTEMPTS, LOGIN_WINDOW_SECONDS, SESSION_TTL_SECONDS } from './constants';
+import { MAX_LOGIN_ATTEMPTS, LOGIN_WINDOW_SECONDS, ROLES } from './constants';
 
 interface LoginAttemptTracker {
   attempts: number[];
@@ -61,30 +61,104 @@ export async function getUserCount(db: DbClient): Promise<number> {
   return db.user.count();
 }
 
-export async function createUser(
+function slugify(name: string): string {
+  const base = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return base || 'org';
+}
+
+async function uniqueSlug(db: DbClient, name: string): Promise<string> {
+  const base = slugify(name);
+  let candidate = base;
+  let suffix = 1;
+  // eslint-disable-next-line no-await-in-loop
+  while (await db.organization.findUnique({ where: { slug: candidate } })) {
+    suffix += 1;
+    candidate = `${base}-${suffix}`;
+  }
+  return candidate;
+}
+
+function validateCredentials(username: string, password: string): string {
+  const trimmed = username.trim();
+  if (!trimmed) {
+    throw new AuthError('Username is required.', 400);
+  }
+  if (!password || password.length < 8) {
+    throw new AuthError('Password must be at least 8 characters.', 400);
+  }
+  return trimmed;
+}
+
+/**
+ * Tenant onboarding: create a new organization and its first user as the
+ * organization administrator. This is the public SaaS sign-up path.
+ */
+export async function createOrganizationWithAdmin(
   db: DbClient,
+  organizationName: string,
   username: string,
   password: string
-): Promise<User> {
-  const count = await getUserCount(db);
-  if (count >= 1) {
-    throw new AuthError('Registration is closed. A user account already exists.', 403);
+): Promise<{ organization: Organization; user: User }> {
+  const orgName = organizationName.trim();
+  if (!orgName) {
+    throw new AuthError('Organization name is required.', 400);
   }
+  const trimmedUser = validateCredentials(username, password);
 
-  const trimmed = username.trim();
-  const existing = await db.user.findUnique({ where: { username: trimmed } });
+  const existing = await db.user.findUnique({ where: { username: trimmedUser } });
   if (existing) {
     throw new AuthError('Username already taken.', 409);
   }
 
-  if (!password || password.length < 8) {
-    throw new AuthError('Password must be at least 8 characters.', 400);
+  const slug = await uniqueSlug(db, orgName);
+  const passwordHash = await hashPassword(password);
+
+  const organization = await db.organization.create({
+    data: { name: orgName, slug },
+  });
+
+  const user = await db.user.create({
+    data: {
+      username: trimmedUser,
+      passwordHash,
+      role: ROLES.ORG_ADMIN,
+      organizationId: organization.id,
+    },
+  });
+
+  return { organization, user };
+}
+
+/**
+ * Add a member to an existing organization (used by an org admin).
+ */
+export async function createOrgMember(
+  db: DbClient,
+  organizationId: number,
+  username: string,
+  password: string,
+  role: string = ROLES.MEMBER
+): Promise<User> {
+  const trimmedUser = validateCredentials(username, password);
+  if (role !== ROLES.MEMBER && role !== ROLES.ORG_ADMIN) {
+    throw new AuthError('Invalid role.', 400);
+  }
+
+  const existing = await db.user.findUnique({ where: { username: trimmedUser } });
+  if (existing) {
+    throw new AuthError('Username already taken.', 409);
   }
 
   return db.user.create({
     data: {
-      username: trimmed,
+      username: trimmedUser,
       passwordHash: await hashPassword(password),
+      role,
+      organizationId,
     },
   });
 }

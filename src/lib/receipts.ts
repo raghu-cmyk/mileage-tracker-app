@@ -51,6 +51,16 @@ export async function getReceipt(db: DbClient, receiptId: number): Promise<Recei
   return db.receipt.findUnique({ where: { id: receiptId } });
 }
 
+export async function getReceiptForOrg(
+  db: DbClient,
+  organizationId: number,
+  receiptId: number
+): Promise<Receipt | null> {
+  return db.receipt.findFirst({
+    where: { id: receiptId, trip: { organizationId } },
+  });
+}
+
 export function receiptFilePath(receipt: Receipt): string {
   return path.join(DATA_DIR, receipt.storagePath);
 }

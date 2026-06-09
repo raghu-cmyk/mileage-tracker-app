@@ -1,10 +1,18 @@
-# Mileage Tracker v6
+# Mileage Tracker (SaaS)
 
-Single-user web application for recording vehicle mileage and producing IRS-substantiation-grade records for tax filing. Built with **Next.js 14 App Router**, **TypeScript**, **Tailwind CSS**, **Prisma**, and **SQLite**.
+Multi-tenant SaaS web application for recording vehicle mileage and producing IRS-substantiation-grade records for tax filing. Each organization (tenant) gets an isolated workspace, with a platform-admin portal for managing every tenant. Built with **Next.js 14 App Router**, **TypeScript**, **Tailwind CSS**, **Prisma**, and **SQLite**.
+
+## SaaS / multi-tenancy
+
+- **Organizations (tenants)** — every Vehicle and Trip is scoped to an `organizationId`; all data-access queries filter by tenant so organizations can never see each other's records.
+- **Self-service onboarding** — anyone can create a new organization at `/register`; the creator becomes the organization administrator (`ORG_ADMIN`).
+- **Role-based access control** — `PLATFORM_ADMIN`, `ORG_ADMIN`, and `MEMBER` roles, enforced in middleware and on the server.
+- **Platform admin portal** — `/admin` lists every tenant with user/vehicle/trip counts and lets the platform admin suspend or reactivate organizations. Suspended tenants are locked out at the server boundary.
+- **Default platform admin** (from seed): username `platform-admin`, password `admin12345` (override with `PLATFORM_ADMIN_USERNAME` / `PLATFORM_ADMIN_PASSWORD`).
 
 ## Features
 
-- **Authentication** — Argon2id password hashing, encrypted HTTP-only sessions (iron-session), login rate limiting (5 attempts / 300 seconds), single-user registration
+- **Authentication** — Argon2id password hashing, encrypted HTTP-only sessions (iron-session), login rate limiting (5 attempts / 300 seconds), organization-scoped sign-up
 - **Vehicles** — Create, edit, archive; annual start/end odometer readings per tax year
 - **Trips** — Full IRC §274(d) substantiation (date, origin, destination, purpose, miles, category, vehicle); late-entry flagging (>7 days)
 - **IRS rates** — Time-effective mileage rates stored as reference data (never hardcoded in app logic); `RATE_SCALE=10` (725 = 72.5¢/mile)
@@ -22,7 +30,7 @@ npm run db:seed
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), register your account, and start logging trips.
+Open [http://localhost:3000](http://localhost:3000), create your organization at `/register`, and start logging trips. Sign in as `platform-admin` / `admin12345` to reach the tenant-management portal at `/admin`.
 
 ## Scripts
 

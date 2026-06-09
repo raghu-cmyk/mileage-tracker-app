@@ -2,12 +2,12 @@ import Link from 'next/link';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { prisma } from '@/lib/db';
-import { requireAuthenticatedUser } from '@/lib/session';
+import { requireOrgContext } from '@/lib/session';
 import { listVehicles } from '@/lib/vehicles';
 
 export default async function VehiclesPage() {
-  await requireAuthenticatedUser();
-  const vehicles = await listVehicles(prisma, true);
+  const { organizationId } = await requireOrgContext();
+  const vehicles = await listVehicles(prisma, organizationId, true);
 
   return (
     <>

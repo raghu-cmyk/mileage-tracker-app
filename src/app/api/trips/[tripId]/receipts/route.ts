@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getErrorMessage } from '@/lib/errors';
 import { storeReceipt } from '@/lib/receipts';
-import { requireAuthenticatedUser } from '@/lib/session';
+import { requireOrgContext } from '@/lib/session';
 import { getTrip } from '@/lib/trips';
 
 interface RouteParams {
@@ -11,13 +11,13 @@ interface RouteParams {
 
 export async function POST(request: Request, { params }: RouteParams) {
   try {
-    await requireAuthenticatedUser();
+    const { organizationId } = await requireOrgContext();
     const tripId = parseInt(params.tripId, 10);
     if (Number.isNaN(tripId)) {
       return NextResponse.json({ error: 'Invalid trip id.' }, { status: 400 });
     }
 
-    const trip = await getTrip(prisma, tripId);
+    const trip = await getTrip(prisma, organizationId, tripId);
     if (!trip) {
       return NextResponse.json({ error: 'Trip not found.' }, { status: 404 });
     }

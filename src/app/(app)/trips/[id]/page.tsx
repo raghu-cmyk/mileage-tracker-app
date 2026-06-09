@@ -6,7 +6,7 @@ import { computeTripDeduction, formatCents, isLateEntered } from '@/lib/deductio
 import { prisma } from '@/lib/db';
 import { formatRateDisplay } from '@/lib/rates';
 import { formatByteSize } from '@/lib/receipts';
-import { requireAuthenticatedUser } from '@/lib/session';
+import { requireOrgContext } from '@/lib/session';
 import { getTrip } from '@/lib/trips';
 import { ReceiptUploadForm } from './ReceiptUploadForm';
 
@@ -15,11 +15,11 @@ interface TripDetailPageProps {
 }
 
 export default async function TripDetailPage({ params }: TripDetailPageProps) {
-  await requireAuthenticatedUser();
+  const { organizationId } = await requireOrgContext();
   const tripId = parseInt(params.id, 10);
   if (Number.isNaN(tripId)) notFound();
 
-  const trip = await getTrip(prisma, tripId);
+  const trip = await getTrip(prisma, organizationId, tripId);
   if (!trip) notFound();
 
   const deduction = await computeTripDeduction(prisma, trip);

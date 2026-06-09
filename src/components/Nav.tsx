@@ -34,7 +34,13 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export function Nav() {
+interface NavProps {
+  organizationName?: string | null;
+  username?: string | null;
+  isPlatformAdmin?: boolean;
+}
+
+export function Nav({ organizationName, username, isPlatformAdmin }: NavProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -44,12 +50,25 @@ export function Nav() {
           <Link href="/dashboard" className="text-lg font-semibold text-text-primary">
             Mileage Tracker
           </Link>
+          {organizationName && (
+            <span className="hidden rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary sm:inline-block">
+              {organizationName}
+            </span>
+          )}
           <nav className="hidden items-center gap-1 md:flex">
             <NavLinks />
+            {isPlatformAdmin && (
+              <Link href="/admin" className="nav-link">
+                Admin
+              </Link>
+            )}
           </nav>
         </div>
 
         <div className="flex items-center gap-2">
+          {username && (
+            <span className="hidden text-sm text-text-secondary lg:inline">{username}</span>
+          )}
           <ThemeToggle />
           <form action="/api/auth/logout" method="POST" className="hidden md:block">
             <button type="submit" className="btn btn-secondary">

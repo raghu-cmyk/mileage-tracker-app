@@ -3,9 +3,16 @@
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { getErrorMessage, isValidationError } from '@/lib/errors';
-import { requireAuthenticatedUser } from '@/lib/session';
-import { createTrip, deleteTrip, updateTrip } from '@/lib/trips';
-import { createVehicle, updateVehicle, archiveVehicle, deleteVehicle, upsertOdometerReading } from '@/lib/vehicles';
+import { requireOrgContext } from '@/lib/session';
+import { createTrip, deleteTrip, getTrip, updateTrip } from '@/lib/trips';
+import {
+  createVehicle,
+  updateVehicle,
+  archiveVehicle,
+  deleteVehicle,
+  getVehicle,
+  upsertOdometerReading,
+} from '@/lib/vehicles';
 
 export interface ActionResult {
   ok: boolean;
@@ -15,8 +22,8 @@ export interface ActionResult {
 
 export async function createTripAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   try {
-    await requireAuthenticatedUser();
-    const trip = await createTrip(prisma, {
+    const { organizationId } = await requireOrgContext();
+    const trip = await createTrip(prisma, organizationId, {
       tripDateRaw: formData.get('trip_date')?.toString(),
       origin: formData.get('origin')?.toString(),
       destination: formData.get('destination')?.toString(),
@@ -40,11 +47,11 @@ export async function updateTripAction(
   formData: FormData
 ): Promise<ActionResult> {
   try {
-    await requireAuthenticatedUser();
-    const trip = await prisma.trip.findUnique({ where: { id: tripId } });
+    const { organizationId } = await requireOrgContext();
+    const trip = await getTrip(prisma, organizationId, tripId);
     if (!trip) return { ok: false, error: 'Trip not found.' };
 
-    await updateTrip(prisma, trip, {
+    await updateTrip(prisma, organizationId, trip, {
       tripDateRaw: formData.get('trip_date')?.toString(),
       origin: formData.get('origin')?.toString(),
       destination: formData.get('destination')?.toString(),
@@ -64,11 +71,8 @@ export async function updateTripAction(
 
 export async function deleteTripAction(tripId: number): Promise<void> {
   try {
-    await requireAuthenticatedUser();
-    const trip = await prisma.trip.findUnique({
-      where: { id: tripId },
-      include: { receipts: true },
-    });
+    const { organizationId } = await requireOrgContext();
+    const trip = await getTrip(prisma, organizationId, tripId);
     if (!trip) {
       redirect(`/trips/${tripId}?error=${encodeURIComponent('Trip not found.')}`);
     }
@@ -82,9 +86,10 @@ export async function deleteTripAction(tripId: number): Promise<void> {
 
 export async function createVehicleAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   try {
-    await requireAuthenticatedUser();
+    const { organizationId } = await requireOrgContext();
     const vehicle = await createVehicle(
       prisma,
+      organizationId,
       formData.get('display_name')?.toString() ?? '',
       formData.get('description')?.toString() ?? ''
     );
@@ -102,8 +107,8 @@ export async function updateVehicleAction(
   formData: FormData
 ): Promise<ActionResult> {
   try {
-    await requireAuthenticatedUser();
-    const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
+    const { organizationId } = await requireOrgContext();
+    const vehicle = await getVehicle(prisma, organizationId, vehicleId);
     if (!vehicle) return { ok: false, error: 'Vehicle not found.' };
 
     await updateVehicle(
@@ -121,8 +126,8 @@ export async function updateVehicleAction(
 
 export async function archiveVehicleAction(vehicleId: number): Promise<void> {
   try {
-    await requireAuthenticatedUser();
-    const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
+    const { organizationId } = await requireOrgContext();
+    const vehicle = await getVehicle(prisma, organizationId, vehicleId);
     if (!vehicle) {
       redirect(`/vehicles/${vehicleId}?error=${encodeURIComponent('Vehicle not found.')}`);
     }
@@ -136,8 +141,8 @@ export async function archiveVehicleAction(vehicleId: number): Promise<void> {
 
 export async function deleteVehicleAction(vehicleId: number): Promise<void> {
   try {
-    await requireAuthenticatedUser();
-    const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
+    const { organizationId } = await requireOrgContext();
+    const vehicle = await getVehicle(prisma, organizationId, vehicleId);
     if (!vehicle) {
       redirect(`/vehicles/${vehicleId}?error=${encodeURIComponent('Vehicle not found.')}`);
     }
@@ -151,8 +156,8 @@ export async function deleteVehicleAction(vehicleId: number): Promise<void> {
 
 export async function upsertOdometerAction(vehicleId: number, formData: FormData): Promise<void> {
   try {
-    await requireAuthenticatedUser();
-    const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
+    const { organizationId } = await requireOrgContext();
+    const vehicle = await getVehicle(prisma, organizationId, vehicleId);
     if (!vehicle) {
       redirect(`/vehicles/${vehicleId}?error=${encodeURIComponent('Vehicle not found.')}`);
     }

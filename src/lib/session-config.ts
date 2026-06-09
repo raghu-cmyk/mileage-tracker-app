@@ -3,6 +3,8 @@ import { SESSION_TTL_SECONDS } from './constants';
 
 export interface SessionData {
   userId?: number;
+  role?: string;
+  organizationId?: number | null;
   expiresAt?: number;
 }
 

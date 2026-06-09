@@ -46,6 +46,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  const isPlatformAdmin = session.role === 'PLATFORM_ADMIN';
+
+  // Only platform admins may enter the /admin portal.
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    if (!isPlatformAdmin) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    return response;
+  }
+
+  // Platform admins have no tenant context; keep them in the admin portal.
+  if (isPlatformAdmin && (pathname === '/dashboard' || pathname === '/')) {
+    return NextResponse.redirect(new URL('/admin', request.url));
+  }
+
   return response;
 }
 

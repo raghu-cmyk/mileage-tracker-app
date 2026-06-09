@@ -3,7 +3,7 @@ import { updateTripAction, type ActionResult } from '@/app/actions/data';
 import { PageHeader } from '@/components/PageHeader';
 import { TripForm } from '@/components/TripForm';
 import { prisma } from '@/lib/db';
-import { requireAuthenticatedUser } from '@/lib/session';
+import { requireOrgContext } from '@/lib/session';
 import { getTrip, listCategories } from '@/lib/trips';
 import { listVehicles } from '@/lib/vehicles';
 
@@ -12,16 +12,16 @@ interface EditTripPageProps {
 }
 
 export default async function EditTripPage({ params }: EditTripPageProps) {
-  await requireAuthenticatedUser();
+  const { organizationId } = await requireOrgContext();
   const tripId = parseInt(params.id, 10);
   if (Number.isNaN(tripId)) notFound();
 
-  const trip = await getTrip(prisma, tripId);
+  const trip = await getTrip(prisma, organizationId, tripId);
   if (!trip) notFound();
 
   const [categories, vehicles] = await Promise.all([
     listCategories(prisma),
-    listVehicles(prisma),
+    listVehicles(prisma, organizationId),
   ]);
 
   const boundAction = updateTripAction.bind(null, tripId) as (

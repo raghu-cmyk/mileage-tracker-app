@@ -45,9 +45,13 @@ function yearBounds(taxYear: number): { start: Date; end: Date } {
   };
 }
 
-export async function buildTripLogRows(db: DbClient, taxYear: number): Promise<TripLogRow[]> {
+export async function buildTripLogRows(
+  db: DbClient,
+  organizationId: number,
+  taxYear: number
+): Promise<TripLogRow[]> {
   const { start, end } = yearBounds(taxYear);
-  const trips = await listTrips(db, { dateFrom: start, dateTo: end });
+  const trips = await listTrips(db, organizationId, { dateFrom: start, dateTo: end });
   const sorted = [...trips].sort(
     (a, b) => a.tripDate.getTime() - b.tripDate.getTime() || a.id - b.id
   );
@@ -81,8 +85,12 @@ function escapeCsvField(value: string): string {
   return value;
 }
 
-export async function renderTripLogCsv(db: DbClient, taxYear: number): Promise<string> {
-  const rows = await buildTripLogRows(db, taxYear);
+export async function renderTripLogCsv(
+  db: DbClient,
+  organizationId: number,
+  taxYear: number
+): Promise<string> {
+  const rows = await buildTripLogRows(db, organizationId, taxYear);
   const lines = [CSV_HEADERS.join(',')];
   for (const row of rows) {
     lines.push(
@@ -106,8 +114,12 @@ export async function renderTripLogCsv(db: DbClient, taxYear: number): Promise<s
   return lines.join('\n') + '\n';
 }
 
-export async function renderYearSummaryPdf(db: DbClient, taxYear: number): Promise<Buffer> {
-  const summary = await computeYearSummary(db, taxYear);
+export async function renderYearSummaryPdf(
+  db: DbClient,
+  organizationId: number,
+  taxYear: number
+): Promise<Buffer> {
+  const summary = await computeYearSummary(db, organizationId, taxYear);
   const receiptNotes = new Map<number, string>();
   for (const row of summary.tripDeductions) {
     const tripReceipts = await listReceiptsForTrip(db, row.tripId);

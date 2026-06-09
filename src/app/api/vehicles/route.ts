@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getErrorMessage } from '@/lib/errors';
-import { requireAuthenticatedUser } from '@/lib/session';
+import { requireOrgContext } from '@/lib/session';
 import { createVehicle } from '@/lib/vehicles';
 
 export async function POST(request: Request) {
   try {
-    await requireAuthenticatedUser();
+    const { organizationId } = await requireOrgContext();
     const body = await request.json();
     const vehicle = await createVehicle(
       prisma,
+      organizationId,
       String(body.display_name ?? body.displayName ?? ''),
       String(body.description ?? '')
     );

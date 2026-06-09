@@ -11,7 +11,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { VehicleForm } from '@/components/VehicleForm';
 import { availableTaxYears } from '@/lib/deductions';
 import { prisma } from '@/lib/db';
-import { requireAuthenticatedUser } from '@/lib/session';
+import { requireOrgContext } from '@/lib/session';
 import {
   getVehicle,
   listOdometerReadings,
@@ -23,15 +23,15 @@ interface VehicleDetailPageProps {
 }
 
 export default async function VehicleDetailPage({ params }: VehicleDetailPageProps) {
-  await requireAuthenticatedUser();
+  const { organizationId } = await requireOrgContext();
   const vehicleId = parseInt(params.id, 10);
   if (Number.isNaN(vehicleId)) notFound();
 
-  const vehicle = await getVehicle(prisma, vehicleId);
+  const vehicle = await getVehicle(prisma, organizationId, vehicleId);
   if (!vehicle) notFound();
 
   const readings = await listOdometerReadings(prisma, vehicleId);
-  const hasTrips = await vehicleHasTrips(prisma, vehicleId);
+  const hasTrips = await vehicleHasTrips(prisma, organizationId, vehicleId);
   const currentYear = new Date().getFullYear();
   const currentReading = readings.find((r) => r.taxYear === currentYear);
 

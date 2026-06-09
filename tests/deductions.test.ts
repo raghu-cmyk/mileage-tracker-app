@@ -18,6 +18,7 @@ describe('Deduction calculation', () => {
   let businessId: number;
   let personalId: number;
   let vehicleId: number;
+  let organizationId: number;
 
   beforeAll(() => {
     execSync('npx prisma db push --skip-generate', {
@@ -36,8 +37,15 @@ describe('Deduction calculation', () => {
     await prisma.trip.deleteMany();
     await prisma.vehicleOdometerReading.deleteMany();
     await prisma.vehicle.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.organization.deleteMany();
     await prisma.mileageRate.deleteMany();
     await prisma.tripCategory.deleteMany();
+
+    const organization = await prisma.organization.create({
+      data: { name: 'Test Org', slug: `test-org-${Date.now()}` },
+    });
+    organizationId = organization.id;
 
     const business = await prisma.tripCategory.create({
       data: { code: 'business', displayName: 'Business', isDeductible: true },
@@ -66,7 +74,7 @@ describe('Deduction calculation', () => {
     });
 
     const vehicle = await prisma.vehicle.create({
-      data: { displayName: 'Test Car', description: '' },
+      data: { organizationId, displayName: 'Test Car', description: '' },
     });
     vehicleId = vehicle.id;
   });
@@ -83,6 +91,7 @@ describe('Deduction calculation', () => {
   }) {
     return prisma.trip.create({
       data: {
+        organizationId,
         vehicleId,
         categoryId: options.categoryId,
         tripDate: options.tripDate,
@@ -152,7 +161,7 @@ describe('Deduction calculation', () => {
       createdAt: new Date('2026-03-20'),
     });
 
-    const summary = await computeYearSummary(prisma, 2026);
+    const summary = await computeYearSummary(prisma, organizationId, 2026);
     expect(summary.totalMiles.toString()).toBe('37.5');
     expect(summary.deductibleMiles.toString()).toBe('17.5');
     expect(summary.personalMiles.toString()).toBe('20');
@@ -176,7 +185,7 @@ describe('Deduction calculation', () => {
   });
 
   it('handles empty year summary', async () => {
-    const summary = await computeYearSummary(prisma, 2026);
+    const summary = await computeYearSummary(prisma, organizationId, 2026);
     expect(summary.totalMiles.toString()).toBe('0');
     expect(summary.businessUsePercentage).toBeNull();
     expect(summary.lateEnteredCount).toBe(0);

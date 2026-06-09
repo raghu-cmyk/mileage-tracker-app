@@ -3,7 +3,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { computeTripDeduction, formatCents, isLateEntered } from '@/lib/deductions';
 import { prisma } from '@/lib/db';
-import { requireAuthenticatedUser } from '@/lib/session';
+import { requireOrgContext } from '@/lib/session';
 import { listCategories, listTrips } from '@/lib/trips';
 import { listVehicles } from '@/lib/vehicles';
 
@@ -30,9 +30,9 @@ function parseOptionalDate(value?: string): Date | undefined {
 }
 
 export default async function TripsPage({ searchParams }: TripsPageProps) {
-  await requireAuthenticatedUser();
+  const { organizationId } = await requireOrgContext();
 
-  const trips = await listTrips(prisma, {
+  const trips = await listTrips(prisma, organizationId, {
     vehicleId: parseOptionalInt(searchParams.vehicle_id),
     categoryId: parseOptionalInt(searchParams.category_id),
     dateFrom: parseOptionalDate(searchParams.date_from),
@@ -41,7 +41,7 @@ export default async function TripsPage({ searchParams }: TripsPageProps) {
 
   const [categories, vehicles] = await Promise.all([
     listCategories(prisma),
-    listVehicles(prisma),
+    listVehicles(prisma, organizationId),
   ]);
 
   const deductions = await Promise.all(trips.map((t) => computeTripDeduction(prisma, t)));

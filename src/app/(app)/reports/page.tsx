@@ -7,14 +7,14 @@ import {
 } from '@/lib/deductions';
 import { prisma } from '@/lib/db';
 import { getErrorMessage } from '@/lib/errors';
-import { requireAuthenticatedUser } from '@/lib/session';
+import { requireOrgContext } from '@/lib/session';
 
 interface ReportsPageProps {
   searchParams: { year?: string };
 }
 
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
-  await requireAuthenticatedUser();
+  const { organizationId } = await requireOrgContext();
 
   const years = availableTaxYears();
   const selectedYear = searchParams.year
@@ -25,7 +25,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   let error: string | null = null;
 
   try {
-    summary = await computeYearSummary(prisma, selectedYear);
+    summary = await computeYearSummary(prisma, organizationId, selectedYear);
   } catch (err) {
     error = getErrorMessage(err);
   }

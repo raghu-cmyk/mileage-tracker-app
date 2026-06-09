@@ -72,7 +72,11 @@ async function runSteps(): Promise<StepResult[]> {
   const results: StepResult[] = [];
   let cookie: string | undefined;
 
-  const register = await postJson(`${BASE}/api/auth/register`, { username, password });
+  const register = await postJson(`${BASE}/api/auth/register`, {
+    organization_name: `Smoke Org ${Date.now()}`,
+    username,
+    password,
+  });
   results.push({
     name: 'register',
     status: register.status,

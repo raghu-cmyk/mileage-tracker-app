@@ -2,7 +2,8 @@
 
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import { authenticateUser, createUser, getClientKey, getUserCount } from '@/lib/auth';
+import { authenticateUser, createOrganizationWithAdmin, getClientKey } from '@/lib/auth';
+import { ROLES } from '@/lib/constants';
 import { prisma } from '@/lib/db';
 import { AuthError, getErrorMessage } from '@/lib/errors';
 import { establishSession } from '@/lib/session';
@@ -14,6 +15,7 @@ export interface ActionResult {
 
 export async function registerAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   try {
+    const organizationName = String(formData.get('organization_name') ?? '');
     const username = String(formData.get('username') ?? '');
     const password = String(formData.get('password') ?? '');
     const confirm = String(formData.get('confirm_password') ?? '');
@@ -22,8 +24,13 @@ export async function registerAction(_prev: ActionResult, formData: FormData): P
       return { ok: false, error: 'Passwords do not match.' };
     }
 
-    const user = await createUser(prisma, username, password);
-    await establishSession(user.id);
+    const { user } = await createOrganizationWithAdmin(
+      prisma,
+      organizationName,
+      username,
+      password
+    );
+    await establishSession(user);
     redirect('/dashboard');
   } catch (err) {
     if (err instanceof AuthError) {
@@ -37,6 +44,7 @@ export async function registerAction(_prev: ActionResult, formData: FormData): P
 }
 
 export async function loginAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  let destination = '/dashboard';
   try {
     const username = String(formData.get('username') ?? '');
     const password = String(formData.get('password') ?? '');
@@ -44,8 +52,8 @@ export async function loginAction(_prev: ActionResult, formData: FormData): Prom
     const clientKey = getClientKey(headersList);
 
     const user = await authenticateUser(prisma, username, password, clientKey);
-    await establishSession(user.id);
-    redirect('/dashboard');
+    await establishSession(user);
+    destination = user.role === ROLES.PLATFORM_ADMIN ? '/admin' : '/dashboard';
   } catch (err) {
     if (err instanceof AuthError) {
       return { ok: false, error: err.message };
@@ -55,9 +63,10 @@ export async function loginAction(_prev: ActionResult, formData: FormData): Prom
     }
     return { ok: false, error: getErrorMessage(err) };
   }
+  redirect(destination);
 }
 
+// Public SaaS sign-up is always open: anyone can create a new organization.
 export async function getRegistrationOpen(): Promise<boolean> {
-  const count = await getUserCount(prisma);
-  return count < 1;
+  return true;
 }

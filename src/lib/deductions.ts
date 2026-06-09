@@ -108,11 +108,15 @@ export async function computeTripDeduction(
   };
 }
 
-export async function computeYearSummary(db: DbClient, taxYear: number): Promise<YearSummary> {
+export async function computeYearSummary(
+  db: DbClient,
+  organizationId: number,
+  taxYear: number
+): Promise<YearSummary> {
   const yearStart = new Date(Date.UTC(taxYear, 0, 1));
   const yearEnd = new Date(Date.UTC(taxYear, 11, 31));
 
-  const trips = await listTrips(db, { dateFrom: yearStart, dateTo: yearEnd });
+  const trips = await listTrips(db, organizationId, { dateFrom: yearStart, dateTo: yearEnd });
 
   const tripDeductions: TripDeduction[] = [];
   const categoryTotals = new Map<string, CategorySummary>();

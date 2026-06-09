@@ -17,24 +17,40 @@ function validateOdometerPair(start: number | null, end: number | null): void {
   }
 }
 
-export async function listVehicles(db: DbClient, includeArchived = false): Promise<Vehicle[]> {
+export async function listVehicles(
+  db: DbClient,
+  organizationId: number,
+  includeArchived = false
+): Promise<Vehicle[]> {
   return db.vehicle.findMany({
-    where: includeArchived ? {} : { isArchived: false },
+    where: { organizationId, ...(includeArchived ? {} : { isArchived: false }) },
     orderBy: { displayName: 'asc' },
   });
 }
 
-export async function getVehicle(db: DbClient, vehicleId: number): Promise<Vehicle | null> {
-  return db.vehicle.findUnique({ where: { id: vehicleId } });
+export async function getVehicle(
+  db: DbClient,
+  organizationId: number,
+  vehicleId: number
+): Promise<Vehicle | null> {
+  return db.vehicle.findFirst({ where: { id: vehicleId, organizationId } });
 }
 
-export async function vehicleHasTrips(db: DbClient, vehicleId: number): Promise<boolean> {
-  const trip = await db.trip.findFirst({ where: { vehicleId }, select: { id: true } });
+export async function vehicleHasTrips(
+  db: DbClient,
+  organizationId: number,
+  vehicleId: number
+): Promise<boolean> {
+  const trip = await db.trip.findFirst({
+    where: { vehicleId, organizationId },
+    select: { id: true },
+  });
   return trip != null;
 }
 
 export async function createVehicle(
   db: DbClient,
+  organizationId: number,
   displayName: string,
   description = ''
 ): Promise<Vehicle> {
@@ -44,7 +60,7 @@ export async function createVehicle(
   }
 
   const vehicle = await db.vehicle.create({
-    data: { displayName: name, description: description.trim() },
+    data: { organizationId, displayName: name, description: description.trim() },
   });
 
   await recordAuditEvent(db, {
@@ -114,7 +130,7 @@ export async function archiveVehicle(db: DbClient, vehicle: Vehicle): Promise<Ve
 }
 
 export async function deleteVehicle(db: DbClient, vehicle: Vehicle): Promise<void> {
-  if (await vehicleHasTrips(db, vehicle.id)) {
+  if (await vehicleHasTrips(db, vehicle.organizationId, vehicle.id)) {
     throw new VehicleHasTripsError(
       'This vehicle has associated trips and cannot be deleted. Archive it instead.'
     );

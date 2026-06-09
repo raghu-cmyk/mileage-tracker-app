@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { authenticateUser, createUser, getClientKey } from '@/lib/auth';
+import { authenticateUser, getClientKey } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { AuthError } from '@/lib/errors';
 import { establishSession } from '@/lib/session';
@@ -14,9 +14,12 @@ export async function POST(request: Request) {
     const clientKey = getClientKey(headersList);
 
     const user = await authenticateUser(prisma, username, password, clientKey);
-    await establishSession(user.id);
+    await establishSession(user);
 
-    return NextResponse.json({ ok: true, userId: user.id }, { status: 200 });
+    return NextResponse.json(
+      { ok: true, userId: user.id, role: user.role, organizationId: user.organizationId },
+      { status: 200 }
+    );
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

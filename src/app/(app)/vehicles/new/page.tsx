@@ -1,10 +1,10 @@
 import { createVehicleAction } from '@/app/actions/data';
 import { PageHeader } from '@/components/PageHeader';
 import { VehicleForm } from '@/components/VehicleForm';
-import { requireAuthenticatedUser } from '@/lib/session';
+import { requireOrgContext } from '@/lib/session';
 
 export default async function NewVehiclePage() {
-  await requireAuthenticatedUser();
+  await requireOrgContext();
 
   return (
     <>

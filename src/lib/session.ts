@@ -2,21 +2,29 @@ import 'server-only';
 
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
-import type { User } from '@prisma/client';
-import { SESSION_TTL_SECONDS } from './constants';
+import type { Organization, User } from '@prisma/client';
+import { ROLES, SESSION_TTL_SECONDS } from './constants';
 import { prisma } from './db';
 import { AuthError } from './errors';
 import { sessionOptions, type SessionData } from './session-config';
 
 export { sessionOptions, type SessionData } from './session-config';
 
+export interface OrgContext {
+  user: User;
+  organizationId: number;
+  organization: Organization;
+}
+
 export async function getSession() {
   return getIronSession<SessionData>(await cookies(), sessionOptions);
 }
 
-export async function establishSession(userId: number): Promise<void> {
+export async function establishSession(user: Pick<User, 'id' | 'role' | 'organizationId'>): Promise<void> {
   const session = await getSession();
-  session.userId = userId;
+  session.userId = user.id;
+  session.role = user.role;
+  session.organizationId = user.organizationId ?? null;
   session.expiresAt = Date.now() / 1000 + SESSION_TTL_SECONDS;
   await session.save();
 }
@@ -49,4 +57,43 @@ export async function requireAuthenticatedUser(): Promise<User> {
     throw new AuthError('Authentication required.', 401);
   }
   return user;
+}
+
+/**
+ * Resolve the tenant context for a normal application request. Enforces that the
+ * caller belongs to an active organization. Platform admins (no organization)
+ * are rejected here — they belong in the /admin portal.
+ */
+export async function requireOrgContext(): Promise<OrgContext> {
+  const user = await requireAuthenticatedUser();
+  if (user.organizationId == null) {
+    throw new AuthError('No organization is associated with this account.', 403);
+  }
+  const organization = await prisma.organization.findUnique({
+    where: { id: user.organizationId },
+  });
+  if (!organization) {
+    await clearSession();
+    throw new AuthError('Organization not found.', 403);
+  }
+  if (!organization.isActive) {
+    throw new AuthError('This organization has been suspended. Contact your administrator.', 403);
+  }
+  return { user, organizationId: organization.id, organization };
+}
+
+export async function requirePlatformAdmin(): Promise<User> {
+  const user = await requireAuthenticatedUser();
+  if (user.role !== ROLES.PLATFORM_ADMIN) {
+    throw new AuthError('Platform administrator access required.', 403);
+  }
+  return user;
+}
+
+export function isPlatformAdmin(user: Pick<User, 'role'>): boolean {
+  return user.role === ROLES.PLATFORM_ADMIN;
+}
+
+export function isOrgAdmin(user: Pick<User, 'role'>): boolean {
+  return user.role === ROLES.ORG_ADMIN;
 }

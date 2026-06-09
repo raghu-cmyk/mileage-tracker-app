@@ -17,14 +17,29 @@ export default function RegisterForm() {
       </div>
       <div className="flex flex-1 items-center justify-center px-4 pb-12">
         <div className="card w-full max-w-md">
-          <h1 className="text-2xl font-semibold text-text-primary">Create account</h1>
+          <h1 className="text-2xl font-semibold text-text-primary">Create your organization</h1>
           <p className="mt-1 text-sm text-text-secondary">
-            Single-user registration. Choose a username and secure password.
+            Start a new workspace. You&apos;ll be the organization administrator and can invite
+            teammates later.
           </p>
 
           {state.error && <div className="alert-error mt-4">{state.error}</div>}
 
           <form action={formAction} className="mt-6 space-y-4">
+            <div>
+              <label htmlFor="organization_name" className="form-label">
+                Organization name
+              </label>
+              <input
+                id="organization_name"
+                name="organization_name"
+                type="text"
+                required
+                autoComplete="organization"
+                placeholder="Acme Logistics"
+                className="form-input"
+              />
+            </div>
             <div>
               <label htmlFor="username" className="form-label">
                 Username
@@ -67,7 +82,7 @@ export default function RegisterForm() {
               />
             </div>
             <button type="submit" className="btn btn-primary w-full">
-              Create account
+              Create organization
             </button>
           </form>
 
